@@ -1,5 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
-import { good as goodSounds, bad as badSounds } from 'virtual:audio-manifest'
+import {
+  good as goodSounds,
+  bad as badSounds,
+  goodMovies,
+} from 'virtual:audio-manifest'
 import './App.css'
 
 type ShapeType = 'circle' | 'triangle' | 'square' | 'star'
@@ -167,7 +171,9 @@ const App = () => {
   const [feedback, setFeedback] = useState<Record<number, 'correct' | 'wrong'>>(
     {},
   )
+  const [movieSrc, setMovieSrc] = useState<string | null>(null)
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const stopCurrentAudio = () => {
     const current = currentAudioRef.current
@@ -178,9 +184,21 @@ const App = () => {
     }
   }
 
+  const closeMovie = () => {
+    const v = videoRef.current
+    if (v) {
+      v.pause()
+      v.currentTime = 0
+    }
+    setMovieSrc(null)
+  }
+
   const handleTap = useCallback((shape: ShapeInstance) => {
     stopCurrentAudio()
-    if (shape.sound) {
+    const playMovie = shape.isTarget && goodMovies.length > 0
+    if (playMovie) {
+      setMovieSrc(pick(goodMovies))
+    } else if (shape.sound) {
       const audio = new Audio(shape.sound)
       currentAudioRef.current = audio
       audio.addEventListener('ended', () => {
@@ -207,6 +225,7 @@ const App = () => {
 
   const restart = () => {
     stopCurrentAudio()
+    closeMovie()
     setSession(buildSession())
     setFeedback({})
   }
@@ -266,6 +285,22 @@ const App = () => {
           </div>
         )}
       </main>
+      {movieSrc && (
+        <div
+          className="movie-overlay"
+          onPointerDown={closeMovie}
+          role="presentation"
+        >
+          <video
+            ref={videoRef}
+            className="movie-overlay__video"
+            src={movieSrc}
+            autoPlay
+            playsInline
+            onEnded={closeMovie}
+          />
+        </div>
+      )}
     </div>
   )
 }

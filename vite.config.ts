@@ -8,10 +8,10 @@ const BASE = '/train-sound-toy-box/'
 const audioManifestPlugin = (): Plugin => {
   const virtualId = 'virtual:audio-manifest'
   const resolvedId = '\0' + virtualId
-  const listMp3 = (sub: string): string[] => {
+  const listByExt = (sub: string, ext: string): string[] => {
     try {
       return readdirSync(resolve(__dirname, 'public/assets', sub))
-        .filter((f) => f.toLowerCase().endsWith('.mp3'))
+        .filter((f) => f.toLowerCase().endsWith(ext))
         .sort()
         .map((f) => `${BASE}assets/${sub}/${encodeURIComponent(f)}`)
     } catch {
@@ -26,9 +26,10 @@ const audioManifestPlugin = (): Plugin => {
     },
     load(id) {
       if (id !== resolvedId) return null
-      const good = listMp3('good')
-      const bad = listMp3('bad')
-      return `export const good = ${JSON.stringify(good)};\nexport const bad = ${JSON.stringify(bad)};\n`
+      const good = listByExt('good', '.mp3')
+      const bad = listByExt('bad', '.mp3')
+      const goodMovies = listByExt('good_movie', '.mp4')
+      return `export const good = ${JSON.stringify(good)};\nexport const bad = ${JSON.stringify(bad)};\nexport const goodMovies = ${JSON.stringify(goodMovies)};\n`
     },
     configureServer(server) {
       const watcher = server.watcher
