@@ -180,9 +180,12 @@ const App = () => {
   const [feedback, setFeedback] = useState<Record<number, "correct" | "wrong">>(
     {},
   );
-  const [movieSrc, setMovieSrc] = useState<string | null>(null);
+  const [movie, setMovie] = useState<{ src: string; playId: number } | null>(
+    null,
+  );
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const playIdRef = useRef(0);
 
   const stopCurrentAudio = () => {
     const current = currentAudioRef.current;
@@ -199,13 +202,18 @@ const App = () => {
       v.pause();
       v.currentTime = 0;
     }
-    setMovieSrc(null);
+    setMovie(null);
+  };
+
+  const playMovie = (src: string) => {
+    playIdRef.current += 1;
+    setMovie({ src, playId: playIdRef.current });
   };
 
   const handleTap = useCallback((shape: ShapeInstance) => {
     stopCurrentAudio();
     if (shape.isTarget && shape.movie) {
-      setMovieSrc(shape.movie);
+      playMovie(shape.movie);
     } else if (shape.sound) {
       const audio = new Audio(shape.sound);
       currentAudioRef.current = audio;
@@ -293,16 +301,17 @@ const App = () => {
           </div>
         )}
       </main>
-      {movieSrc && (
+      {movie && (
         <div
           className="movie-overlay"
           onPointerDown={closeMovie}
           role="presentation"
         >
           <video
+            key={movie.playId}
             ref={videoRef}
             className="movie-overlay__video"
-            src={movieSrc}
+            src={movie.src}
             autoPlay
             playsInline
             onEnded={closeMovie}
