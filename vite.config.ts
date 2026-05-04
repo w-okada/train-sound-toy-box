@@ -44,4 +44,7 @@ const audioManifestPlugin = (): Plugin => {
 
 export default defineConfig({
   plugins: [react(), audioManifestPlugin()],
+  build: {
+    outDir: 'docs',
+  },
 })
