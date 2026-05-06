@@ -186,6 +186,10 @@ const App = () => {
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const playIdRef = useRef(0);
+  const lastTouchAtRef = useRef(0);
+
+  const isStaleMouseAfterTouch = () =>
+    Date.now() - lastTouchAtRef.current < 500;
 
   const stopCurrentAudio = () => {
     const current = currentAudioRef.current;
@@ -210,40 +214,34 @@ const App = () => {
     setMovie({ src, playId: playIdRef.current });
   };
 
-  const handleTap = useCallback(
-    (shape: ShapeInstance, e: React.SyntheticEvent) => {
-      if (e.type === "touchstart") {
-        e.preventDefault();
-      }
-      stopCurrentAudio();
-      if (shape.isTarget && shape.movie) {
-        playMovie(shape.movie);
-      } else if (shape.sound) {
-        const audio = new Audio(shape.sound);
-        currentAudioRef.current = audio;
-        audio.addEventListener("ended", () => {
-          if (currentAudioRef.current === audio) {
-            currentAudioRef.current = null;
-          }
-        });
-        audio.play().catch(() => {
-          /* ignore autoplay errors */
-        });
-      }
-      setFeedback((prev) => ({
-        ...prev,
-        [shape.id]: shape.isTarget ? "correct" : "wrong",
-      }));
-      window.setTimeout(() => {
-        setFeedback((prev) => {
-          const next = { ...prev };
-          delete next[shape.id];
-          return next;
-        });
-      }, 600);
-    },
-    [],
-  );
+  const handleTap = useCallback((shape: ShapeInstance) => {
+    stopCurrentAudio();
+    if (shape.isTarget && shape.movie) {
+      playMovie(shape.movie);
+    } else if (shape.sound) {
+      const audio = new Audio(shape.sound);
+      currentAudioRef.current = audio;
+      audio.addEventListener("ended", () => {
+        if (currentAudioRef.current === audio) {
+          currentAudioRef.current = null;
+        }
+      });
+      audio.play().catch(() => {
+        /* ignore autoplay errors */
+      });
+    }
+    setFeedback((prev) => ({
+      ...prev,
+      [shape.id]: shape.isTarget ? "correct" : "wrong",
+    }));
+    window.setTimeout(() => {
+      setFeedback((prev) => {
+        const next = { ...prev };
+        delete next[shape.id];
+        return next;
+      });
+    }, 600);
+  }, []);
 
   const restart = () => {
     stopCurrentAudio();
@@ -299,8 +297,14 @@ const App = () => {
                 width: `${shape.sizePx}px`,
                 height: `${shape.sizePx}px`,
               }}
-              onTouchStart={(e) => handleTap(shape, e)}
-              onMouseDown={(e) => handleTap(shape, e)}
+              onTouchStart={() => {
+                lastTouchAtRef.current = Date.now();
+                handleTap(shape);
+              }}
+              onMouseDown={() => {
+                if (isStaleMouseAfterTouch()) return;
+                handleTap(shape);
+              }}
             >
               <ShapeSvg type={shape.type} color={shape.color} />
             </div>
@@ -323,11 +327,14 @@ const App = () => {
       {movie && (
         <div
           className="movie-overlay"
-          onTouchStart={(e) => {
-            e.preventDefault();
+          onTouchStart={() => {
+            lastTouchAtRef.current = Date.now();
             closeMovie();
           }}
-          onMouseDown={closeMovie}
+          onMouseDown={() => {
+            if (isStaleMouseAfterTouch()) return;
+            closeMovie();
+          }}
           role="presentation"
         >
           <video
