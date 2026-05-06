@@ -23,7 +23,8 @@ body,
   background: var(--bg);
   color: var(--text);
   user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .app {

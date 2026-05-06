@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   good as goodSounds,
   bad as badSounds,
@@ -210,34 +210,40 @@ const App = () => {
     setMovie({ src, playId: playIdRef.current });
   };
 
-  const handleTap = useCallback((shape: ShapeInstance) => {
-    stopCurrentAudio();
-    if (shape.isTarget && shape.movie) {
-      playMovie(shape.movie);
-    } else if (shape.sound) {
-      const audio = new Audio(shape.sound);
-      currentAudioRef.current = audio;
-      audio.addEventListener("ended", () => {
-        if (currentAudioRef.current === audio) {
-          currentAudioRef.current = null;
-        }
-      });
-      audio.play().catch(() => {
-        /* ignore autoplay errors */
-      });
-    }
-    setFeedback((prev) => ({
-      ...prev,
-      [shape.id]: shape.isTarget ? "correct" : "wrong",
-    }));
-    window.setTimeout(() => {
-      setFeedback((prev) => {
-        const next = { ...prev };
-        delete next[shape.id];
-        return next;
-      });
-    }, 600);
-  }, []);
+  const handleTap = useCallback(
+    (shape: ShapeInstance, e: React.SyntheticEvent) => {
+      if (e.type === "touchstart") {
+        e.preventDefault();
+      }
+      stopCurrentAudio();
+      if (shape.isTarget && shape.movie) {
+        playMovie(shape.movie);
+      } else if (shape.sound) {
+        const audio = new Audio(shape.sound);
+        currentAudioRef.current = audio;
+        audio.addEventListener("ended", () => {
+          if (currentAudioRef.current === audio) {
+            currentAudioRef.current = null;
+          }
+        });
+        audio.play().catch(() => {
+          /* ignore autoplay errors */
+        });
+      }
+      setFeedback((prev) => ({
+        ...prev,
+        [shape.id]: shape.isTarget ? "correct" : "wrong",
+      }));
+      window.setTimeout(() => {
+        setFeedback((prev) => {
+          const next = { ...prev };
+          delete next[shape.id];
+          return next;
+        });
+      }, 600);
+    },
+    [],
+  );
 
   const restart = () => {
     stopCurrentAudio();
@@ -245,6 +251,18 @@ const App = () => {
     setSession(buildSession());
     setFeedback({});
   };
+
+  useEffect(() => {
+    const block = (e: Event) => e.preventDefault();
+    document.addEventListener("gesturestart", block);
+    document.addEventListener("gesturechange", block);
+    document.addEventListener("gestureend", block);
+    return () => {
+      document.removeEventListener("gesturestart", block);
+      document.removeEventListener("gesturechange", block);
+      document.removeEventListener("gestureend", block);
+    };
+  }, []);
 
   const noAudio = goodSounds.length === 0 || badSounds.length === 0;
 
@@ -281,7 +299,8 @@ const App = () => {
                 width: `${shape.sizePx}px`,
                 height: `${shape.sizePx}px`,
               }}
-              onPointerDown={() => handleTap(shape)}
+              onTouchStart={(e) => handleTap(shape, e)}
+              onMouseDown={(e) => handleTap(shape, e)}
             >
               <ShapeSvg type={shape.type} color={shape.color} />
             </div>
@@ -304,7 +323,11 @@ const App = () => {
       {movie && (
         <div
           className="movie-overlay"
-          onPointerDown={closeMovie}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            closeMovie();
+          }}
+          onMouseDown={closeMovie}
           role="presentation"
         >
           <video
