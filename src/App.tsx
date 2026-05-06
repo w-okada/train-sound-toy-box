@@ -189,7 +189,7 @@ const App = () => {
   const lastTouchAtRef = useRef(0);
 
   const isStaleMouseAfterTouch = () =>
-    Date.now() - lastTouchAtRef.current < 500;
+    Date.now() - lastTouchAtRef.current < 2000;
 
   const stopCurrentAudio = () => {
     const current = currentAudioRef.current;
